@@ -49,6 +49,12 @@ Import only YAGEO 0402 resistors:
 dotnet run --project .\src\YouEDA.CLI\YouEDA.CLI.csproj -- --category resistor --manufacturer YAGEO --package 0402 --catalog C:\Data\lcsc-catalog.csv --output C:\Libraries\Yageo-0402 --workers 4 --rps 1
 ```
 
+Limit any import to a specific LCSC assembly class (`basic`, `preferred`, or `extended`):
+
+```powershell
+dotnet run --project .\src\YouEDA.CLI\YouEDA.CLI.csproj -- --category resistor --part-class basic --catalog C:\Data\lcsc-catalog.csv --output C:\Libraries\Basic-Resistors --workers 4 --rps 1
+```
+
 The second command is intentionally simple once the catalog export is in place. LCSC's documented category-list API requires an approved API key and request signature, so this project does **not** bypass access controls or scrape undocumented catalogue pages. Obtain the CSV/JSON catalog through LCSC's approved API/export process, then use it as the discovery manifest.
 
 Use `--help` for all flags. The default output contains:
