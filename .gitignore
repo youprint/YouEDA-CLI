@@ -1,0 +1,8 @@
+bin/
+obj/
+.youeda-bulk/
+cache/
+models/
+*.PcbLib
+*.SchLib
+
