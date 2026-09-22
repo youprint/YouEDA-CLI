@@ -4,8 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AssemblyName>YouEDA.Bulk</AssemblyName>
-    <RootNamespace>YouEDA.Bulk</RootNamespace>
+    <AssemblyName>YouEDA.CLI</AssemblyName>
+    <RootNamespace>YouEDA.CLI</RootNamespace>
     <YouEdaRoot Condition="'$(YouEdaRoot)' == ''">$(MSBuildProjectDirectory)\..\..\third_party\YouEDA</YouEdaRoot>
     <AltiumSharpRoot Condition="'$(AltiumSharpRoot)' == ''">$(MSBuildProjectDirectory)\..\..\third_party\AltiumSharp</AltiumSharpRoot>
   </PropertyGroup>

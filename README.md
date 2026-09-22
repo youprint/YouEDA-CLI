@@ -1,6 +1,6 @@
-# YouEDA-Bulk
+# YouEDA CLI
 
-YouEDA-Bulk is a high-throughput, restartable Windows command-line importer for turning EasyEDA/LCSC CAD data into native Altium `youeda.PcbLib` and `youeda.SchLib` libraries.
+YouEDA CLI is a high-throughput, restartable Windows command-line importer for turning EasyEDA/LCSC CAD data into native Altium `youeda.PcbLib` and `youeda.SchLib` libraries.
 
 It deliberately shares the converter used by [YouEDA](https://github.com/youprint/YouEDA): geometry, layer mapping, 3D embedding, bundled common symbols, and IC/MCU symbol generation remain consistent between desktop and automation workflows.
 
@@ -21,12 +21,12 @@ It deliberately shares the converter used by [YouEDA](https://github.com/youprin
 Prerequisites: Windows, .NET SDK 10, and Git.
 
 ```powershell
-git clone https://github.com/youprint/YouEDA-Bulk.git
-cd YouEDA-Bulk
+git clone https://github.com/youprint/YouEDA-CLI.git
+cd YouEDA-CLI
 git clone https://github.com/youprint/YouEDA.git third_party/YouEDA
 git clone https://github.com/issus/AltiumSharp.git third_party/AltiumSharp
-dotnet restore .\src\YouEDA.Bulk\YouEDA.Bulk.csproj
-dotnet build .\src\YouEDA.Bulk\YouEDA.Bulk.csproj -c Release
+dotnet restore .\src\YouEDA.CLI\YouEDA.CLI.csproj
+dotnet build .\src\YouEDA.CLI\YouEDA.CLI.csproj -c Release
 ```
 
 ## Commands
@@ -34,13 +34,13 @@ dotnet build .\src\YouEDA.Bulk\YouEDA.Bulk.csproj -c Release
 Import a BOM/list:
 
 ```powershell
-dotnet run --project .\src\YouEDA.Bulk\YouEDA.Bulk.csproj -- --input .\parts.csv --output C:\Libraries\YouEDA --workers 4 --rps 1
+dotnet run --project .\src\YouEDA.CLI\YouEDA.CLI.csproj -- --input .\parts.csv --output C:\Libraries\YouEDA --workers 4 --rps 1
 ```
 
 Import every resistor selected from a local official LCSC catalog export:
 
 ```powershell
-dotnet run --project .\src\YouEDA.Bulk\YouEDA.Bulk.csproj -- --category resistor --catalog C:\Data\lcsc-catalog.csv --output C:\Libraries\Resistors --workers 4 --rps 1
+dotnet run --project .\src\YouEDA.CLI\YouEDA.CLI.csproj -- --category resistor --catalog C:\Data\lcsc-catalog.csv --output C:\Libraries\Resistors --workers 4 --rps 1
 ```
 
 The second command is intentionally simple once the catalog export is in place. LCSC's documented category-list API requires an approved API key and request signature, so this project does **not** bypass access controls or scrape undocumented catalogue pages. Obtain the CSV/JSON catalog through LCSC's approved API/export process, then use it as the discovery manifest.
