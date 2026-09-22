@@ -55,6 +55,14 @@ Limit any import to a specific LCSC assembly class (`basic`, `preferred`, or `ex
 dotnet run --project .\src\YouEDA.CLI\YouEDA.CLI.csproj -- --category resistor --part-class basic --catalog C:\Data\lcsc-catalog.csv --output C:\Libraries\Basic-Resistors --workers 4 --rps 1
 ```
 
+For example, import every 10 µF extended YAGEO capacitor:
+
+```powershell
+dotnet run --project .\src\YouEDA.CLI\YouEDA.CLI.csproj -- --category capacitor --capacitance 10uF --manufacturer YAGEO --part-class extended --catalog C:\Data\lcsc-catalog.csv --output C:\Libraries\Yageo-10uF-Extended --workers 4 --rps 1
+```
+
+Further catalog filters include `--resistance`, `--inductance`, `--voltage`, `--tolerance`, `--power`, `--dielectric`, `--mounting`, and repeatable `--contains`/`--exclude` conditions. Every supplied condition is an AND filter.
+
 The second command is intentionally simple once the catalog export is in place. LCSC's documented category-list API requires an approved API key and request signature, so this project does **not** bypass access controls or scrape undocumented catalogue pages. Obtain the CSV/JSON catalog through LCSC's approved API/export process, then use it as the discovery manifest.
 
 Use `--help` for all flags. The default output contains:
