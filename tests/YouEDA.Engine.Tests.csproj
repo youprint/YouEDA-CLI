@@ -22,4 +22,10 @@
     <ProjectReference Include="..\engine\YouEDA.Engine.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\engine\Assets\BundledUserSymbols.SchLib" Link="Symbols\BundledUserSymbols.SchLib">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

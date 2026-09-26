@@ -7,9 +7,13 @@ Forked the `Services`/`Models` files listed in [MIGRATION_PLAN.md](MIGRATION_PLA
 `AltiumFootprintNaming`, `NativeCommonSymbolPolicy`, `DiscreteNetworkSymbolPolicy`,
 `TransistorSymbolPolicy`, `EasyEdaSymbolPreference`). Wrote the new category/catalog filtering
 logic (`CatalogFilter`) that has no `YouEDA` equivalent. `engine/` builds with zero UI
-dependencies. Remaining: port/rewrite the symbol/footprint correctness tests from `YouEDA`'s
-`tests/KiCadSmoke` (diode/transistor polarity, native-symbol preservation, JLCPCB tier
-handling) — `tests/` currently only covers `CsvBomReader`/`CatalogFilter`, not the exporters.
+dependencies and has offline correctness tests (in the spirit of `YouEDA`'s `tests/KiCadSmoke`)
+covering the documented AGENTS.md identities: diode/transistor polarity rejection,
+native-symbol preservation (polarised capacitor, optoisolator, MB10S bridge), and the
+confirmed-LDO preference list — plus one end-to-end test against the real bundled catalog
+asset. Not yet ported: the export-side geometry/checkpoint tests (KiCad output, family-merge
+concurrency) that `KiCadSmoke` also covers — deferred to Phase 4, where `tests/` is expanded
+to the full engine surface.
 
 ## Phase 2 — CLI Interface & Parameter Handling ✅ (mostly)
 
