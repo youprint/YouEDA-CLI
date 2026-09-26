@@ -145,6 +145,22 @@ roughly 10x faster in this measurement. `--with-3d` timing has not been separate
 yet. These are two data points, not a guarantee; your own network conditions and EasyEDA's
 response time will vary the cold-cache number.
 
+## Package
+
+Build a framework-dependent Windows x64 folder, matching `YouEDA` desktop's own release
+packaging:
+
+```powershell
+dotnet publish cli\YouEDA.CLI.csproj -c Release -r win-x64 --self-contained false -o dist\YouEDA-CLI
+Get-FileHash dist\YouEDA-CLI\YouEDA.CLI.exe -Algorithm SHA256
+```
+
+The published folder includes `YouEDA.CLI.exe`, its dependencies, and the bundled
+`Symbols\BundledUserSymbols.SchLib`/`Templates\AltiumTemplate.PcbLib` assets — everything
+needed to run on a machine with the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)
+installed, no SDK required. Verify the published SHA-256 checksum before distributing it,
+the same way `YouEDA` desktop releases do.
+
 ## License and notices
 
 MIT license for this project. The converter depends on

@@ -34,13 +34,16 @@ cache (bottlenecked by the fixed 1 request/second fetch gate), ~600 parts/minute
 throughput at different `--workers` counts (cold-cache throughput is gate-bound regardless, so
 this mainly matters for warm-cache/parse-bound runs), and `--with-3d` download overhead.
 
-## Phase 4 — Packaging, Distribution & Testing
+## Phase 4 — Packaging, Distribution & Testing ✅ (packaging; tests remaining)
 
 CI now builds and tests on every push/PR (`.github/workflows/ci.yml`), following the README's
-documented build recipe. Remaining: a framework-dependent Windows x64 publish, matching
-`YouEDA`'s own release packaging (SHA-256 checksum, bundled templates/symbol catalog); and
-expanding `tests/` with the export-side geometry/checkpoint tests noted in Phase 1, including
-an offline acceptance run against a real LCSC catalog export.
+documented build recipe. `dotnet publish` for a framework-dependent win-x64 folder is verified
+working (see README.md's Package section) — bundled `Symbols`/`Templates` assets, a runnable
+`YouEDA.CLI.exe`, and a documented SHA-256 checksum step, matching `YouEDA` desktop's own
+release packaging. Not yet an automated release workflow (tag → build → publish → attach to a
+GitHub release) — that's still manual. Remaining: expand `tests/` with the export-side
+geometry/checkpoint tests noted in Phase 1, including an offline acceptance run against a real
+LCSC catalog export.
 
 ## Phase 5 — Backport Engine Fixes to the YouEDA Desktop App
 
