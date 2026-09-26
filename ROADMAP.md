@@ -15,29 +15,32 @@ asset. Not yet ported: the export-side geometry/checkpoint tests (KiCad output, 
 concurrency) that `KiCadSmoke` also covers — deferred to Phase 4, where `tests/` is expanded
 to the full engine surface.
 
-## Phase 2 — CLI Interface & Parameter Handling ✅ (mostly)
+## Phase 2 — CLI Interface & Parameter Handling ✅
 
 `cli/`'s argument parser is wired to the real `engine/` pipeline: `--input` BOM/CSV import,
 `--category`/`--catalog` filtered import (all documented filter flags implemented in
 `CatalogFilter`), `--with-3d`, and `--resume`/`--checkpoint` against `BulkLibraryWriter`'s
-ledger — all verified against live LCSC/EasyEDA data, including a full 351-part run. Remaining:
-a live terminal progress UI (worker/queue state, throughput, ETA) beyond the current per-part
-log lines; the structured JSON-lines error log is already done (`ImportDiagnostics`,
-`errors.jsonl`).
+ledger — all verified against live LCSC/EasyEDA data, including a full 351-part run. A live
+throughput/ETA progress indicator (periodic summary line: done/total, rate, elapsed, ETA)
+runs alongside the per-part `[OK]`/`[FAIL]` log lines. The structured JSON-lines error log
+is done (`ImportDiagnostics`, `errors.jsonl`).
 
-## Phase 3 — Performance Benchmarking & Async Operations
+## Phase 3 — Performance Benchmarking & Async Operations ✅ (initial numbers)
 
-Once a working engine exists, measure real throughput under the worker-pool/rate-limit design
-described in ARCHITECTURE.md and replace the README's "Performance: TBD" section with actual
-numbers — parts/minute at various `--workers`/`--rps` settings, cache-hit vs. cold-fetch timing,
-and 3D-download overhead with `--with-3d`. No numbers are invented before this phase runs.
+Measured real throughput for the documented worker-pool/rate-limit design (see
+ARCHITECTURE.md) against the full 351-part JLCPCB Basic Parts BOM: ~58 parts/minute cold
+cache (bottlenecked by the fixed 1 request/second fetch gate), ~600 parts/minute warm cache
+(bottlenecked by parse/write instead). See README.md's Performance section. Not yet measured:
+throughput at different `--workers` counts (cold-cache throughput is gate-bound regardless, so
+this mainly matters for warm-cache/parse-bound runs), and `--with-3d` download overhead.
 
 ## Phase 4 — Packaging, Distribution & Testing
 
-Framework-dependent Windows x64 publish, matching `YouEDA`'s own release packaging
-(SHA-256 checksum, bundled templates/symbol catalog). Expand `tests/` beyond the current
-skeleton to cover the full engine surface, including an offline acceptance run against a
-real LCSC catalog export.
+CI now builds and tests on every push/PR (`.github/workflows/ci.yml`), following the README's
+documented build recipe. Remaining: a framework-dependent Windows x64 publish, matching
+`YouEDA`'s own release packaging (SHA-256 checksum, bundled templates/symbol catalog); and
+expanding `tests/` with the export-side geometry/checkpoint tests noted in Phase 1, including
+an offline acceptance run against a real LCSC catalog export.
 
 ## Phase 5 — Backport Engine Fixes to the YouEDA Desktop App
 

@@ -126,9 +126,24 @@ variations but isn't guaranteed to match every possible export's column naming.
 
 ## Performance
 
-**TBD.** No comparable legacy implementation of this CLI currently exists to benchmark
-against, so no throughput numbers are published here. Real numbers will be measured and
-recorded once Phase 3 (see ROADMAP.md) has a working engine to profile.
+Two measured runs, `--input` against the full 351-part JLCPCB Basic Parts BOM, `--workers 4`,
+default rate gate (fixed at 1 request/second):
+
+| | Cold cache | Warm cache |
+|---|---|---|
+| Parts | 351/351 succeeded, 0 failed | 351/351 succeeded, 0 failed |
+| Wall time | 6m03s | 35s |
+| Throughput | ~58 parts/minute | ~600 parts/minute |
+| Output | `youeda.PcbLib` 233 KB, `youeda.SchLib` 1.7 MB | same |
+
+Cold-cache throughput is dominated by the fixed one-request-per-second fetch gate (the same
+shared gate `YouEDA` desktop uses, see ARCHITECTURE.md) — `--workers` above 1 mainly lets
+parse/export overlap with the next fetch's wait, it does not raise the request rate itself.
+Warm cache (raw CAD payloads already in `.youeda-bulk/cache/`, valid for 7 days) skips the
+network entirely and is bottlenecked by parsing and native library writes instead, which is
+roughly 10x faster in this measurement. `--with-3d` timing has not been separately measured
+yet. These are two data points, not a guarantee; your own network conditions and EasyEDA's
+response time will vary the cold-cache number.
 
 ## License and notices
 
