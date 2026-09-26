@@ -125,9 +125,39 @@ public static class ImportJobRunner
             }
         }
 
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        using var progressCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var progressTask = ReportProgressAsync(progressCts.Token);
+
         await Task.WhenAll(pending.Select(ProcessAsync));
+        progressCts.Cancel();
+        try { await progressTask; } catch (OperationCanceledException) { }
+
         await writer.CheckpointAsync();
 
         return new ImportJobResult(allParts.Count, succeeded, failed, completed.Count);
+
+        async Task ReportProgressAsync(CancellationToken progressToken)
+        {
+            // Mirrors YouEDA's desktop live speed indicator: average throughput, elapsed time,
+            // and an ETA, updated on a periodic tick even while requests are waiting on the
+            // network. This never blocks or slows the actual import work.
+            while (true)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(5), progressToken);
+                var done = succeeded + failed;
+                if (done == 0 || done >= pending.Length) continue;
+                var ratePerMinute = done / Math.Max(stopwatch.Elapsed.TotalMinutes, 0.001);
+                var remaining = pending.Length - done;
+                var eta = ratePerMinute > 0 ? TimeSpan.FromMinutes(remaining / ratePerMinute) : TimeSpan.Zero;
+                log?.Invoke(
+                    $"-- progress: {done}/{pending.Length} ({succeeded} ok, {failed} failed) | " +
+                    $"{ratePerMinute:0.0}/min | elapsed {FormatDuration(stopwatch.Elapsed)} | ETA {FormatDuration(eta)} --");
+            }
+        }
     }
+
+    private static string FormatDuration(TimeSpan duration) => duration.TotalHours >= 1
+        ? $"{(int)duration.TotalHours}h{duration.Minutes:00}m"
+        : duration.TotalMinutes >= 1 ? $"{(int)duration.TotalMinutes}m{duration.Seconds:00}s" : $"{duration.Seconds}s";
 }
