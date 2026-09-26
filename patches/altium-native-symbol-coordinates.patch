@@ -1,0 +1,192 @@
+diff --git a/src/OriginalCircuit.Altium/Serialization/Readers/SchDocReader.cs b/src/OriginalCircuit.Altium/Serialization/Readers/SchDocReader.cs
+index bda55c7..94892bc 100644
+--- a/src/OriginalCircuit.Altium/Serialization/Readers/SchDocReader.cs
++++ b/src/OriginalCircuit.Altium/Serialization/Readers/SchDocReader.cs
+@@ -1196,7 +1196,7 @@ public sealed class SchDocReader
+             SecondaryRadius = CoordFromDxp(dto.SecondaryRadius, dto.SecondaryRadiusFrac),
+             StartAngle = dto.StartAngle,
+             EndAngle = dto.EndAngle,
+-            LineWidth = CoordFromDxp(dto.LineWidth),
++            LineWidth = LineWidthFromIndex(dto.LineWidth),
+             Color = dto.Color,
+             AreaColor = dto.AreaColor,
+             OwnerIndex = dto.OwnerIndex,
+@@ -1616,7 +1616,8 @@ public sealed class SchDocReader
+     {
+         Coord.FromMils(1),
+         Coord.FromMils(2),
+-        Coord.FromMils(4)
++        Coord.FromMils(4),
++        Coord.FromMils(6)
+     };
+ 
+     private static Coord LineWidthFromIndex(int index) =>
+diff --git a/src/OriginalCircuit.Altium/Serialization/Readers/SchLibReader.cs b/src/OriginalCircuit.Altium/Serialization/Readers/SchLibReader.cs
+index bc66aea..4ff79ba 100644
+--- a/src/OriginalCircuit.Altium/Serialization/Readers/SchLibReader.cs
++++ b/src/OriginalCircuit.Altium/Serialization/Readers/SchLibReader.cs
+@@ -1345,8 +1345,8 @@ public sealed class SchLibReader
+         for (var i = 1; i <= Math.Max(vertexCount, 10); i++)
+         {
+             Coord x = default, y = default;
+-            var hasX = parameters.TryGetValue($"X{i}", out var xStr) && TryParseCoord(xStr, out x);
+-            var hasY = parameters.TryGetValue($"Y{i}", out var yStr) && TryParseCoord(yStr, out y);
++            var hasX = TryReadVertexCoord(parameters, $"X{i}", out x);
++            var hasY = TryReadVertexCoord(parameters, $"Y{i}", out y);
+             if (hasX || hasY || i <= vertexCount)
+             {
+                 if (i == 1)
+@@ -1393,8 +1393,8 @@ public sealed class SchLibReader
+         for (var i = 1; i <= Math.Max(vertexCount, 50); i++)
+         {
+             Coord x = default, y = default;
+-            var hasX = parameters.TryGetValue($"X{i}", out var xStr) && TryParseCoord(xStr, out x);
+-            var hasY = parameters.TryGetValue($"Y{i}", out var yStr) && TryParseCoord(yStr, out y);
++            var hasX = TryReadVertexCoord(parameters, $"X{i}", out x);
++            var hasY = TryReadVertexCoord(parameters, $"Y{i}", out y);
+             if (hasX || hasY || i <= vertexCount)
+             {
+                 if (i == 1)
+@@ -1446,8 +1446,8 @@ public sealed class SchLibReader
+         for (var i = 1; i <= Math.Max(vertexCount, 50); i++)
+         {
+             Coord x = default, y = default;
+-            var hasX = parameters.TryGetValue($"X{i}", out var xStr) && TryParseCoord(xStr, out x);
+-            var hasY = parameters.TryGetValue($"Y{i}", out var yStr) && TryParseCoord(yStr, out y);
++            var hasX = TryReadVertexCoord(parameters, $"X{i}", out x);
++            var hasY = TryReadVertexCoord(parameters, $"Y{i}", out y);
+             if (hasX || hasY || i <= vertexCount)
+             {
+                 polygon.AddVertex(hasX ? x : default, hasY ? y : default);
+@@ -1511,8 +1511,8 @@ public sealed class SchLibReader
+         for (var i = 1; i <= Math.Max(pointCount, 50); i++)
+         {
+             Coord x = default, y = default;
+-            var hasX = parameters.TryGetValue($"X{i}", out var xStr) && TryParseCoord(xStr, out x);
+-            var hasY = parameters.TryGetValue($"Y{i}", out var yStr) && TryParseCoord(yStr, out y);
++            var hasX = TryReadVertexCoord(parameters, $"X{i}", out x);
++            var hasY = TryReadVertexCoord(parameters, $"Y{i}", out y);
+             if (hasX || hasY || i <= pointCount)
+             {
+                 bezier.AddPoint(hasX ? x : default, hasY ? y : default);
+@@ -1829,7 +1829,7 @@ public sealed class SchLibReader
+             SecondaryRadius = CoordFromDxp(dto.SecondaryRadius, dto.SecondaryRadiusFrac),
+             StartAngle = dto.StartAngle,
+             EndAngle = dto.EndAngle,
+-            LineWidth = CoordFromDxp(dto.LineWidth, dto.LineWidthFrac),
++            LineWidth = LineWidthFromIndex(dto.LineWidth),
+             Color = dto.Color,
+             AreaColor = dto.AreaColor,
+             OwnerIndex = dto.OwnerIndex,
+@@ -1952,8 +1952,8 @@ public sealed class SchLibReader
+         for (var i = 1; i <= Math.Max(vertexCount, 10); i++)
+         {
+             Coord x = default, y = default;
+-            var hasX = parameters.TryGetValue($"X{i}", out var xStr) && TryParseCoord(xStr, out x);
+-            var hasY = parameters.TryGetValue($"Y{i}", out var yStr) && TryParseCoord(yStr, out y);
++            var hasX = TryReadVertexCoord(parameters, $"X{i}", out x);
++            var hasY = TryReadVertexCoord(parameters, $"Y{i}", out y);
+             if (hasX || hasY || i <= vertexCount)
+             {
+                 bus.AddVertex(new CoordPoint(hasX ? x : default, hasY ? y : default));
+@@ -2102,8 +2102,8 @@ public sealed class SchLibReader
+         for (var i = 1; i <= Math.Max(vertexCount, 50); i++)
+         {
+             Coord x = default, y = default;
+-            var hasX = parameters.TryGetValue($"X{i}", out var xStr) && TryParseCoord(xStr, out x);
+-            var hasY = parameters.TryGetValue($"Y{i}", out var yStr) && TryParseCoord(yStr, out y);
++            var hasX = TryReadVertexCoord(parameters, $"X{i}", out x);
++            var hasY = TryReadVertexCoord(parameters, $"Y{i}", out y);
+             if (hasX || hasY || i <= vertexCount)
+             {
+                 blanket.AddVertex(new CoordPoint(hasX ? x : default, hasY ? y : default));
+@@ -2310,21 +2310,16 @@ public sealed class SchLibReader
+             : LineWidths[0];
+     }
+ 
+-    private static bool TryParseCoord(string value, out Coord result)
++    private static bool TryReadVertexCoord(Dictionary<string, string> parameters, string key, out Coord result)
+     {
+-        result = default;
+-
+-        if (string.IsNullOrEmpty(value))
+-            return false;
+-
+-        // Schematic uses 10 units per mil (different from PCB's 10000)
+-        if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var intValue))
+-        {
+-            // Convert from schematic units to internal units
+-            result = Coord.FromRaw(intValue * 1000); // Scale up
+-            return true;
+-        }
+-
+-        return false;
++        // Native SchLib vertices use DXP units, like locations: 10 mil per unit.
++        // Fraction-only coordinates are valid when the integral zero is omitted.
++        int whole = 0, fraction = 0;
++        var hasWhole = parameters.TryGetValue(key, out var value) &&
++            int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out whole);
++        var hasFraction = parameters.TryGetValue(key + "_FRAC", out var frac) &&
++            int.TryParse(frac, NumberStyles.Integer, CultureInfo.InvariantCulture, out fraction);
++        result = CoordFromDxp(whole, fraction);
++        return hasWhole || hasFraction;
+     }
+ }
+diff --git a/src/OriginalCircuit.Altium/Serialization/Writers/SchLibWriter.cs b/src/OriginalCircuit.Altium/Serialization/Writers/SchLibWriter.cs
+index 015b504..34e61e3 100644
+--- a/src/OriginalCircuit.Altium/Serialization/Writers/SchLibWriter.cs
++++ b/src/OriginalCircuit.Altium/Serialization/Writers/SchLibWriter.cs
+@@ -336,6 +336,8 @@ public sealed class SchLibWriter
+             var written = new HashSet<object>(ReferenceEqualityComparer.Instance);
+             foreach (var prim in component.ReadOrderedPrimitives)
+             {
++                // Removed donor parameters must not return through the captured read order.
++                if (prim is SchParameter removed && !component.Parameters.Contains(removed)) continue;
+                 written.Add(prim);
+                 EmitPrimitive(prim);
+             }
+@@ -874,7 +874,7 @@ public sealed class SchLibWriter
+         AddCoordParam(parameters, "Location.Y", ellipticalArc.Center.Y);
+         AddCoordParam(parameters, "Radius", ellipticalArc.PrimaryRadius);
+         AddCoordParam(parameters, "SecondaryRadius", ellipticalArc.SecondaryRadius);
+-        AddCoordParam(parameters, "LineWidth", ellipticalArc.LineWidth);
++        AddNonZero(parameters, "LineWidth", LineWidthToIndex(ellipticalArc.LineWidth));
+         if (ellipticalArc.StartAngle != 0)
+             parameters["StartAngle"] = FormatAngle(ellipticalArc.StartAngle);
+         parameters["EndAngle"] = FormatAngle(ellipticalArc.EndAngle);
+@@ -1672,16 +1672,14 @@ public sealed class SchLibWriter
+     }
+ 
+     /// <summary>
+-    /// Converts a Coord to schematic units string (raw / 1000, i.e., 10 units per mil).
+-    /// Used for vertex coordinates in polygon, polyline, and bezier records
+-    /// where the reader's TryParseCoord() expects schematic units.
++    /// Converts a Coord to whole DXP units (10 mil per unit), used by native SchLib vertices.
+     /// </summary>
+     internal static string CoordToSchematicUnits(Coord coord) =>
+-        (coord.ToRaw() / 1000).ToString(CultureInfo.InvariantCulture);
++        (coord.ToRaw() / 100_000).ToString(CultureInfo.InvariantCulture);
+ 
+     /// <summary>
+-    /// Converts a Coord to whole DXP units (raw / 100,000, i.e. 10 mils per unit). SchDoc vertex
+-    /// coordinates use this scale — unlike SchLib vertices, which use <see cref="CoordToSchematicUnits"/>.
++    /// Converts a Coord to whole DXP units (raw / 100,000, i.e. 10 mils per unit).
++    /// Both SchDoc and SchLib vertex coordinates use this scale.
+     /// </summary>
+     internal static string CoordToDxpUnits(Coord coord) =>
+         (coord.ToRaw() / 100_000).ToString(CultureInfo.InvariantCulture);
+@@ -1694,7 +1692,13 @@ public sealed class SchLibWriter
+     private static void AddSchVertex(Dictionary<string, string> parameters, int index, Coord x, Coord y,
+         Func<Coord, string>? toUnits = null)
+     {
+-        var conv = toUnits ?? CoordToSchematicUnits;
++        if (toUnits is null)
++        {
++            AddCoordParam(parameters, $"X{index}", x);
++            AddCoordParam(parameters, $"Y{index}", y);
++            return;
++        }
++        var conv = toUnits;
+         var sx = conv(x);
+         var sy = conv(y);
+         if (sx != "0") parameters[$"X{index}"] = sx;

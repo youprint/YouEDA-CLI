@@ -2,7 +2,12 @@ bin/
 obj/
 .youeda-bulk/
 cache/
-models/
+/models/
 *.PcbLib
 *.SchLib
+!engine/Assets/*.PcbLib
+!engine/Assets/*.SchLib
 
+reference/
+third_party/
+dist/
