@@ -22,6 +22,14 @@ public sealed record CliArguments
     public string? Manufacturer { get; init; }
     public string? Package { get; init; }
     public string? PartClass { get; init; }
+    public string? Resistance { get; init; }
+    public string? Capacitance { get; init; }
+    public string? Inductance { get; init; }
+    public string? Voltage { get; init; }
+    public string? Tolerance { get; init; }
+    public string? Power { get; init; }
+    public string? Dielectric { get; init; }
+    public string? Mounting { get; init; }
     public IReadOnlyList<string> Contains { get; init; } = [];
     public IReadOnlyList<string> Exclude { get; init; } = [];
 
@@ -51,11 +59,16 @@ public sealed record CliArguments
                 case "--manufacturer": result = result with { Manufacturer = Next() }; break;
                 case "--package": result = result with { Package = Next() }; break;
                 case "--part-class": result = result with { PartClass = Next() }; break;
+                case "--resistance": result = result with { Resistance = Next() }; break;
+                case "--capacitance": result = result with { Capacitance = Next() }; break;
+                case "--inductance": result = result with { Inductance = Next() }; break;
+                case "--voltage": result = result with { Voltage = Next() }; break;
+                case "--tolerance": result = result with { Tolerance = Next() }; break;
+                case "--power": result = result with { Power = Next() }; break;
+                case "--dielectric": result = result with { Dielectric = Next() }; break;
+                case "--mounting": result = result with { Mounting = Next() }; break;
                 case "--contains": contains.Add(Next()); break;
                 case "--exclude": exclude.Add(Next()); break;
-                // Additional catalog filters (--resistance, --capacitance, --inductance,
-                // --voltage, --tolerance, --power, --dielectric, --mounting) are deferred
-                // to Phase 1, where they attach to the real catalog filter pipeline.
                 default:
                     throw new ArgumentException($"Unrecognized argument: {args[i]}");
             }

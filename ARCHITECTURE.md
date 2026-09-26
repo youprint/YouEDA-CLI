@@ -83,6 +83,7 @@ to fork in Phase 1 — not aspirational design for the CLI:
 
 - `cli/` — entrypoint, argument parsing, logging, terminal UI. Depends only on `engine/`'s
   public surface.
-- `engine/` — will hold the forked, UI-independent `Services`/`Models` conversion code.
-  Must not reference anything CLI- or UI-specific.
+- `engine/` — holds the forked, UI-independent `Services`/`Models` conversion code, plus the
+  new `CsvBomReader`/`CatalogFilter`/`ImportJobRunner` orchestration. Must not reference
+  anything CLI- or UI-specific.
 - `tests/` — xUnit tests against `engine/`, in the spirit of `YouEDA`'s `tests/KiCadSmoke`.

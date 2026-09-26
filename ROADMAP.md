@@ -1,21 +1,25 @@
 # Roadmap
 
-## Phase 1 — Core Engine Porting & Decoupling
+## Phase 1 — Core Engine Porting & Decoupling ✅
 
-Fork the `Services`/`Models` files listed in [MIGRATION_PLAN.md](MIGRATION_PLAN.md) into
+Forked the `Services`/`Models` files listed in [MIGRATION_PLAN.md](MIGRATION_PLAN.md) into
 `engine/`, closing the dependency gap in the previous `.csproj` linkage (missing
 `AltiumFootprintNaming`, `NativeCommonSymbolPolicy`, `DiscreteNetworkSymbolPolicy`,
-`TransistorSymbolPolicy`, `EasyEdaSymbolPreference`). Write the new category/catalog filtering
-logic that has no `YouEDA` equivalent. `engine/` must build with zero UI dependencies and pass
-symbol/footprint correctness tests ported or rewritten from `YouEDA`'s `tests/KiCadSmoke`
-(diode/transistor polarity, native-symbol preservation, JLCPCB tier handling).
+`TransistorSymbolPolicy`, `EasyEdaSymbolPreference`). Wrote the new category/catalog filtering
+logic (`CatalogFilter`) that has no `YouEDA` equivalent. `engine/` builds with zero UI
+dependencies. Remaining: port/rewrite the symbol/footprint correctness tests from `YouEDA`'s
+`tests/KiCadSmoke` (diode/transistor polarity, native-symbol preservation, JLCPCB tier
+handling) — `tests/` currently only covers `CsvBomReader`/`CatalogFilter`, not the exporters.
 
-## Phase 2 — CLI Interface & Parameter Handling
+## Phase 2 — CLI Interface & Parameter Handling ✅ (mostly)
 
-Wire `cli/`'s argument parser (already scaffolded in this pass) to the real `engine/` pipeline:
-`--input` BOM/CSV import, `--category`/`--catalog` filtered import, `--with-3d`, and
-`--resume`/`--checkpoint` against `BulkLibraryWriter`'s ledger. Add the terminal progress UI
-(worker/queue state, throughput, ETA) and the structured JSON-lines error log.
+`cli/`'s argument parser is wired to the real `engine/` pipeline: `--input` BOM/CSV import,
+`--category`/`--catalog` filtered import (all documented filter flags implemented in
+`CatalogFilter`), `--with-3d`, and `--resume`/`--checkpoint` against `BulkLibraryWriter`'s
+ledger — all verified against live LCSC/EasyEDA data, including a full 351-part run. Remaining:
+a live terminal progress UI (worker/queue state, throughput, ETA) beyond the current per-part
+log lines; the structured JSON-lines error log is already done (`ImportDiagnostics`,
+`errors.jsonl`).
 
 ## Phase 3 — Performance Benchmarking & Async Operations
 

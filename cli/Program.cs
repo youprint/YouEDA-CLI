@@ -25,10 +25,48 @@ if (parsed.OutputPath is null)
     return 2;
 }
 
-if (parsed.InputPath is null)
+IReadOnlyList<string> partNumbers;
+if (parsed.InputPath is not null)
 {
-    Console.Error.WriteLine(
-        "--category/--catalog filtered import is not implemented yet (see ROADMAP.md); use --input <bom.csv>.");
+    partNumbers = CsvBomReader.ReadPartNumbers(parsed.InputPath);
+}
+else if (parsed.Category is not null && parsed.CatalogPath is not null)
+{
+    if (!File.Exists(parsed.CatalogPath))
+    {
+        Console.Error.WriteLine($"Catalog file not found: {parsed.CatalogPath}");
+        return 1;
+    }
+
+    var criteria = new CatalogFilterCriteria
+    {
+        Category = parsed.Category,
+        Manufacturer = parsed.Manufacturer,
+        Package = parsed.Package,
+        PartClass = parsed.PartClass,
+        Resistance = parsed.Resistance,
+        Capacitance = parsed.Capacitance,
+        Inductance = parsed.Inductance,
+        Voltage = parsed.Voltage,
+        Tolerance = parsed.Tolerance,
+        Power = parsed.Power,
+        Dielectric = parsed.Dielectric,
+        Mounting = parsed.Mounting,
+        Contains = parsed.Contains,
+        Exclude = parsed.Exclude,
+    };
+    partNumbers = CatalogFilter.Filter(parsed.CatalogPath, criteria);
+    Console.WriteLine($"Catalog filter matched {partNumbers.Count} part(s).");
+}
+else
+{
+    Console.Error.WriteLine("Provide either --input <bom.csv>, or --category <name> with --catalog <file>.");
+    return 2;
+}
+
+if (partNumbers.Count == 0)
+{
+    Console.Error.WriteLine("No LCSC part numbers to import.");
     return 1;
 }
 
@@ -47,7 +85,6 @@ if (!File.Exists(symbolLibraryPath))
 
 var options = new ImportJobOptions
 {
-    InputPath = parsed.InputPath,
     OutputPath = parsed.OutputPath,
     SymbolLibraryPath = symbolLibraryPath,
     Workers = Math.Max(1, parsed.Workers),
@@ -66,7 +103,7 @@ Console.CancelKeyPress += (_, e) =>
 
 try
 {
-    var result = await ImportJobRunner.RunAsync(options, Console.WriteLine, cts.Token);
+    var result = await ImportJobRunner.RunAsync(partNumbers, options, Console.WriteLine, cts.Token);
     Console.WriteLine(
         $"Done: {result.Succeeded} succeeded, {result.Failed} failed, {result.SkippedAlreadyDone} already checkpointed, {result.Total} total.");
     return result.Failed == 0 ? 0 : 1;
@@ -94,6 +131,14 @@ static void PrintUsage()
           --manufacturer <name>     Filter by manufacturer
           --package <name>          Filter by package
           --part-class <class>      basic | preferred | extended
+          --resistance <value>      Filter by resistance (e.g. 10k)
+          --capacitance <value>     Filter by capacitance (e.g. 10uF)
+          --inductance <value>      Filter by inductance
+          --voltage <value>         Filter by voltage rating
+          --tolerance <value>       Filter by tolerance
+          --power <value>           Filter by power rating
+          --dielectric <value>      Filter by dielectric (e.g. X7R)
+          --mounting <value>        Filter by mounting type
           --contains <text>         Repeatable AND filter
           --exclude <text>          Repeatable AND filter
         """);

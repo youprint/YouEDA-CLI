@@ -6,7 +6,6 @@ namespace YouEDA.Engine.Services;
 
 public sealed record ImportJobOptions
 {
-    public required string InputPath { get; init; }
     public required string OutputPath { get; init; }
     public string? SymbolLibraryPath { get; init; }
     public int Workers { get; init; } = 1;
@@ -18,7 +17,9 @@ public sealed record ImportJobOptions
 public sealed record ImportJobResult(int Total, int Succeeded, int Failed, int SkippedAlreadyDone);
 
 /// <summary>
-/// Orchestrates a BOM/CSV import: bounded parallel fetch/parse against
+/// Orchestrates an import for an already-resolved list of LCSC part numbers, whether they came
+/// from a BOM/CSV (<see cref="CsvBomReader"/>) or a --category/--catalog filter
+/// (<see cref="CatalogFilter"/>): bounded parallel fetch/parse against
 /// <see cref="LcscScraper"/>/<see cref="Parser"/>, serialized through the single-writer
 /// <see cref="BulkLibraryWriter"/>, with a completion ledger for --resume and a JSON-lines
 /// error log for failed parts. Mirrors the checkpoint/retry rules in YouEDA's AGENTS.md.
@@ -26,7 +27,8 @@ public sealed record ImportJobResult(int Total, int Succeeded, int Failed, int S
 public static class ImportJobRunner
 {
     public static async Task<ImportJobResult> RunAsync(
-        ImportJobOptions options, Action<string>? log = null, CancellationToken cancellationToken = default)
+        IReadOnlyList<string> allParts, ImportJobOptions options, Action<string>? log = null,
+        CancellationToken cancellationToken = default)
     {
         Directory.CreateDirectory(options.OutputPath);
         var stateDirectory = Path.Combine(options.OutputPath, ".youeda-bulk");
@@ -41,7 +43,6 @@ public static class ImportJobRunner
             if (File.Exists(errorsPath)) File.Delete(errorsPath);
         }
 
-        var allParts = CsvBomReader.ReadPartNumbers(options.InputPath);
         var completed = options.Resume && File.Exists(completedPath)
             ? new HashSet<string>(await File.ReadAllLinesAsync(completedPath, cancellationToken), StringComparer.OrdinalIgnoreCase)
             : new HashSet<string>(StringComparer.OrdinalIgnoreCase);

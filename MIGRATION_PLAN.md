@@ -1,8 +1,9 @@
 # Migration Plan
 
-This describes which `YouEDA` files get forked into `engine/`, in what order, and which
-`AGENTS.md` behavioral rules must survive the port. It is a plan for Phase 1
-(see [ROADMAP.md](ROADMAP.md)) — no files have been copied yet in this pass.
+This describes which `YouEDA` files were forked into `engine/`, in what order, and which
+`AGENTS.md` behavioral rules must survive the port. All files below are now ported (Phase 1 in
+[ROADMAP.md](ROADMAP.md) is done); what remains is porting/rewriting the correctness tests from
+`YouEDA`'s `tests/KiCadSmoke` — see that file's "Remaining" note.
 
 All source paths below are relative to `reference/YouEDA` (a read-only clone of
 `youprint/YouEDA`, gitignored, not committed to this repo).
@@ -57,22 +58,26 @@ All source paths below are relative to `reference/YouEDA` (a read-only clone of
 | `src/Services/BulkLibraryWriter.cs` | Checkpoint every N processed parts (`--checkpoint`); verified temporary sibling replaces each library file; not a crash-atomic transaction — document that limitation, don't paper over it. |
 | `src/Services/ImportDiagnostics.cs` | Opt-in, local JSON-lines diagnostics; never dump CAD/STEP payloads, headers, or credentials; logging failure must never fail the import. |
 
-### 7. New CLI-specific code (not a port)
+### 7. New CLI-specific code (not a port) ✅
 
 The category+catalog filtering surface (`--category`, `--catalog`, `--manufacturer`,
 `--package`, `--part-class`, `--resistance`, `--capacitance`, `--inductance`, `--voltage`,
 `--tolerance`, `--power`, `--dielectric`, `--mounting`, `--contains`, `--exclude`) has no
 equivalent in `YouEDA` — the desktop GUI only accepts a flat LCSC-code list (see its "CSV/text
-GUI import contract" in `AGENTS.md`). This must be written fresh against the forked
-`EdaComponent`/`Parser` model, not copied from an existing file.
+GUI import contract" in `AGENTS.md`). It's implemented in `engine/Services/CatalogFilter.cs`
+against the forked `EdaComponent`/`Parser` model, not copied from an existing file. Because
+LCSC does not publish one fixed catalog export schema, the filter matches likely column headers
+case-insensitively and falls back to whole-row text search — see that file's doc comment.
+`engine/Services/CsvBomReader.cs` (the `--input` BOM parser) is also new, implementing the
+"CSV/text GUI import contract" rules from `AGENTS.md` rather than porting a GUI-specific file.
 
-## Known gap in the current (pre-fork) linkage
+## Resolved gap in the pre-fork linkage
 
 `YouEDA-CLI`'s previous `.csproj` (`src/YouEDA.CLI/YouEDA.CLI.csproj`, replaced by this
 scaffold) linked `UserSymbolLibraryResolver.cs` and both Altium exporters but omitted
 `AltiumFootprintNaming.cs`, `NativeCommonSymbolPolicy.cs`, `DiscreteNetworkSymbolPolicy.cs`,
 `TransistorSymbolPolicy.cs`, and `EasyEdaSymbolPreference.cs` — all of which those files call
-directly. As wired, that project would not have compiled. Phase 1 must include the full
+directly. As wired, that project would not have compiled. `engine/` now includes the full
 dependency set above, not just the previously-linked subset.
 
 ## Not WPF-dependent

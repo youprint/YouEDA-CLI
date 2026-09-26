@@ -6,10 +6,10 @@ built for unattended catalog-scale jobs where the [YouEDA](https://github.com/yo
 desktop app's interactive workflow doesn't fit.
 
 It shares its conversion engine with YouEDA: geometry, layer mapping, 3D embedding, bundled
-common symbols, and IC/MCU symbol generation are meant to stay consistent between the desktop
-app and this CLI. As of this restart, that engine has not yet been ported into this repository
-— see [ROADMAP.md](ROADMAP.md) and [MIGRATION_PLAN.md](MIGRATION_PLAN.md) for the plan, and
-[ARCHITECTURE.md](ARCHITECTURE.md) for how the pieces fit together.
+common symbols, and IC/MCU symbol generation stay consistent between the desktop app and this
+CLI — the relevant `Services`/`Models` files are forked into [engine/](engine/), per
+[MIGRATION_PLAN.md](MIGRATION_PLAN.md). See [ARCHITECTURE.md](ARCHITECTURE.md) for how the
+pieces fit together and [ROADMAP.md](ROADMAP.md) for what's still ahead (packaging, benchmarks).
 
 > Check every generated footprint, symbol, polarity, and 3D model against the manufacturer
 > datasheet before production use.
@@ -34,11 +34,20 @@ Prerequisites: Windows, .NET SDK 10, and Git.
 ```powershell
 git clone https://github.com/youprint/YouEDA-CLI.git
 cd YouEDA-CLI
-git clone https://github.com/youprint/YouEDA.git third_party/YouEDA
 git clone https://github.com/issus/AltiumSharp.git third_party/AltiumSharp
+git -C third_party/AltiumSharp checkout ce72437f30cd54f549601d4e0ca5846d21272150
+git -C third_party/AltiumSharp submodule update --init --recursive
+git -C third_party/AltiumSharp apply ../../patches/altium-native-symbol-coordinates.patch
+git -C third_party/AltiumSharp apply ../../patches/altium-sdk-sourcelink.patch
 dotnet restore
 dotnet build -c Release
 ```
+
+`engine/` no longer links live into a `third_party/YouEDA` clone — its conversion code has
+been forked in, so only the `AltiumSharp` writer dependency needs cloning. `AltiumSharp` itself
+pulls in its own `OriginalCircuit.Eda.Abstractions`/`Eda.Rendering`/`Mech.*` submodules; the
+`submodule update --init --recursive` step above is required or the build fails with missing
+`Coord`/`CoordPoint`/etc. types (they live in those submodules).
 
 The solution at the repo root (`YouEDA-CLI.sln`) builds `cli/`, `engine/`, and `tests/`
 together. `dotnet test` runs the engine test suite.
@@ -102,11 +111,18 @@ backups, and an eventual sharding policy if Altium becomes slow to open it.
 
 ## Current status
 
-This repository currently contains a project scaffold (`cli/`, `engine/`, `tests/`) with
-placeholder types only — running any command above will print a "not implemented" message.
-The conversion engine has not yet been forked from `YouEDA`. See
-[MIGRATION_PLAN.md](MIGRATION_PLAN.md) for what gets ported and [ROADMAP.md](ROADMAP.md) for
-the phased plan.
+`--input` (BOM/CSV) and `--category`/`--catalog` (filtered catalog) imports both run for real:
+live EasyEDA/LCSC fetch, native Altium export, checkpointing, and `--resume` all work end to
+end. Verified against a live 351-part JLCPCB Basic Parts BOM (351/351 succeeded). Not yet done:
+`--with-3d` is implemented and manually verified but has no automated test; packaging/benchmarks
+(Phases 3-4 in [ROADMAP.md](ROADMAP.md)) haven't started. See [MIGRATION_PLAN.md](MIGRATION_PLAN.md)
+for what was ported and what's still new CLI-only code.
+
+The `--category`/`--catalog` filter has no fixed LCSC export schema to target, since LCSC
+doesn't publish one official CSV layout. The filter matches likely column headers
+case-insensitively (`LCSC Part Number`, `Manufacturer`, `Package`, `Category`, `Library Type`,
+etc.) and falls back to searching the whole row's text, so it tolerates reasonable header
+variations but isn't guaranteed to match every possible export's column naming.
 
 ## Performance
 
