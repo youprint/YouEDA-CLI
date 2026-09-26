@@ -5,5 +5,8 @@ cache/
 /models/
 *.PcbLib
 *.SchLib
+!engine/Assets/*.PcbLib
+!engine/Assets/*.SchLib
 
 reference/
+third_party/
