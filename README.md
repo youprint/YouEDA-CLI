@@ -14,6 +14,16 @@ pieces fit together and [ROADMAP.md](ROADMAP.md) for what's still ahead (packagi
 > Check every generated footprint, symbol, polarity, and 3D model against the manufacturer
 > datasheet before production use.
 
+## Download version 1.4.0
+
+Download `YouEDA-CLI-1.4.0-win-x64.zip` from the
+[v1.4.0 release](https://github.com/youprint/YouEDA-CLI/releases/tag/v1.4.0), extract it, and
+run `YouEDA.CLI.exe --help`. Requires the
+[.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) on Windows 10/11
+x64. Verify the published SHA-256 checksum before use — see the release notes, or
+[docs/releases/1.4.0.md](docs/releases/1.4.0.md) for what's in this release. The .NET 10 SDK
+is only needed to build from source (see [Build](#build) below).
+
 ## What makes it suitable for catalog jobs
 
 - Bounded parallel EasyEDA fetch/parse workers.
@@ -56,71 +66,235 @@ pulls in its own `OriginalCircuit.Eda.Abstractions`/`Eda.Rendering`/`Mech.*` sub
 The solution at the repo root (`YouEDA-CLI.sln`) builds `cli/`, `engine/`, and `tests/`
 together. `dotnet test` runs the engine test suite.
 
-## Commands
+## Command reference
 
-Import a BOM/list:
+Every example below uses `dotnet run --project cli --` during development; substitute
+`YouEDA.CLI.exe` if you're running a [published build](#package). `--output <dir>` is always
+required. Two mutually exclusive ways to pick parts: `--input <bom.csv>` (a fixed list) or
+`--category <name> --catalog <file>` (filtered from a catalog export) — see each below.
 
-```powershell
-dotnet run --project cli -- --input .\parts.csv --output C:\Libraries\YouEDA --workers 4 --rps 1
-```
-
-Import every resistor selected from a local official LCSC catalog export:
-
-```powershell
-dotnet run --project cli -- --category resistor --catalog C:\Data\lcsc-catalog.csv --output C:\Libraries\Resistors --workers 4 --rps 1
-```
-
-Import only YAGEO 0402 resistors:
+### `--input`: import a BOM/CSV list of LCSC part numbers
 
 ```powershell
-dotnet run --project cli -- --category resistor --manufacturer YAGEO --package 0402 --catalog C:\Data\lcsc-catalog.csv --output C:\Libraries\Yageo-0402 --workers 4 --rps 1
+dotnet run --project cli -- --input .\parts.csv --output C:\Libraries\YouEDA --workers 4
 ```
 
-Limit any import to a specific LCSC assembly class (`basic`, `preferred`, or `extended`):
+`parts.csv` follows the same lightweight contract as `YouEDA` desktop's GUI import: one
+unquoted `C` + digits code per line, or any file with a code column — headers, quantity,
+value, description columns are all ignored (see [`CsvBomReader`](engine/Services/CsvBomReader.cs)).
+Separators can be newline, comma, semicolon, tab, or space, and duplicates are removed
+automatically. Both of these work:
+
+```csv
+LCSC Part
+C11702
+C8678
+```
+
+```csv
+LCSC Part,Quantity,Value,Description
+C11702,100,1kΩ,0402 resistor
+C8678,10,SS34,Schottky diode
+```
+
+A quoted code like `"C11702"` is **not** accepted (matches `YouEDA` desktop's parser exactly).
+
+### `--category` / `--catalog`: import filtered from a local LCSC catalog export
+
+Import every resistor from a local catalog export:
 
 ```powershell
-dotnet run --project cli -- --category resistor --part-class basic --catalog C:\Data\lcsc-catalog.csv --output C:\Libraries\Basic-Resistors --workers 4 --rps 1
+dotnet run --project cli -- --category resistor --catalog C:\Data\lcsc-catalog.csv --output C:\Libraries\Resistors --workers 4
 ```
 
-For example, import every 10 µF extended YAGEO capacitor:
+`--category` matches against the catalog's `Category`/`First Category`/`Second Category`
+column if present, falling back to a whole-row text search otherwise — see
+[`CatalogFilter`](engine/Services/CatalogFilter.cs) for exactly how column matching works.
+Every filter flag below is combined with AND: adding more flags only narrows the result.
+
+**`--manufacturer <name>`** — filter by manufacturer:
 
 ```powershell
-dotnet run --project cli -- --category capacitor --capacitance 10uF --manufacturer YAGEO --part-class extended --catalog C:\Data\lcsc-catalog.csv --output C:\Libraries\Yageo-10uF-Extended --workers 4 --rps 1
+dotnet run --project cli -- --category resistor --manufacturer YAGEO --catalog C:\Data\lcsc-catalog.csv --output C:\Libraries\Yageo-Resistors
 ```
 
-Further catalog filters include `--resistance`, `--inductance`, `--voltage`, `--tolerance`,
-`--power`, `--dielectric`, `--mounting`, and repeatable `--contains`/`--exclude` conditions.
-Every supplied condition is an AND filter.
+**`--package <name>`** — filter by package/footprint:
 
-**LCSC access disclaimer:** the category+catalog commands above are intentionally simple
-once the catalog export is in place. LCSC's documented category-list API requires an
-approved API key and request signature, so this project does **not** bypass access controls
-or scrape undocumented catalogue pages. Obtain the CSV/JSON catalog through LCSC's approved
-API/export process, then use it as the discovery manifest.
+```powershell
+dotnet run --project cli -- --category resistor --package 0402 --catalog C:\Data\lcsc-catalog.csv --output C:\Libraries\0402-Resistors
+```
 
-Use `--help` for all flags. The default output contains:
+**`--part-class <basic|preferred|extended>`** — filter by LCSC/JLCPCB assembly class:
+
+```powershell
+dotnet run --project cli -- --category resistor --part-class basic --catalog C:\Data\lcsc-catalog.csv --output C:\Libraries\Basic-Resistors
+```
+
+**`--resistance <value>`** — e.g. every 10 kΩ part:
+
+```powershell
+dotnet run --project cli -- --category resistor --resistance 10k --catalog C:\Data\lcsc-catalog.csv --output C:\Libraries\10k-Resistors
+```
+
+**`--capacitance <value>`** — accepts `µF`/`μF`/`uF` interchangeably (normalized internally):
+
+```powershell
+dotnet run --project cli -- --category capacitor --capacitance 10uF --catalog C:\Data\lcsc-catalog.csv --output C:\Libraries\10uF-Capacitors
+```
+
+**`--inductance <value>`**:
+
+```powershell
+dotnet run --project cli -- --category inductor --inductance 4.7uH --catalog C:\Data\lcsc-catalog.csv --output C:\Libraries\4.7uH-Inductors
+```
+
+**`--voltage <value>`** — voltage rating:
+
+```powershell
+dotnet run --project cli -- --category capacitor --voltage 50V --catalog C:\Data\lcsc-catalog.csv --output C:\Libraries\50V-Capacitors
+```
+
+**`--tolerance <value>`**:
+
+```powershell
+dotnet run --project cli -- --category resistor --tolerance 1% --catalog C:\Data\lcsc-catalog.csv --output C:\Libraries\1pct-Resistors
+```
+
+**`--power <value>`** — power rating:
+
+```powershell
+dotnet run --project cli -- --category resistor --power 0.25W --catalog C:\Data\lcsc-catalog.csv --output C:\Libraries\Quarter-Watt-Resistors
+```
+
+**`--dielectric <value>`** — e.g. ceramic capacitor dielectric:
+
+```powershell
+dotnet run --project cli -- --category capacitor --dielectric X7R --catalog C:\Data\lcsc-catalog.csv --output C:\Libraries\X7R-Capacitors
+```
+
+**`--mounting <value>`** — e.g. `SMD` or `THT`:
+
+```powershell
+dotnet run --project cli -- --category resistor --mounting SMD --catalog C:\Data\lcsc-catalog.csv --output C:\Libraries\SMD-Resistors
+```
+
+**`--contains <text>`** / **`--exclude <text>`** — free-text AND filters, each repeatable:
+
+```powershell
+dotnet run --project cli -- --category diode --contains Schottky --exclude TVS --catalog C:\Data\lcsc-catalog.csv --output C:\Libraries\Schottky-Diodes
+```
+
+**Combining filters** — every 10 µF, extended-class, YAGEO ceramic capacitor:
+
+```powershell
+dotnet run --project cli -- --category capacitor --capacitance 10uF --manufacturer YAGEO --part-class extended --catalog C:\Data\lcsc-catalog.csv --output C:\Libraries\Yageo-10uF-Extended
+```
+
+**LCSC access disclaimer:** the commands above are intentionally simple once the catalog
+export is in place. LCSC's documented category-list API requires an approved API key and
+request signature, so this project does **not** bypass access controls or scrape undocumented
+catalogue pages. Obtain the CSV/JSON catalog through LCSC's approved API/export process, then
+use it as the discovery manifest.
+
+### `--workers <n>`: parallel fetch/parse concurrency
+
+```powershell
+dotnet run --project cli -- --input .\parts.csv --output C:\Libraries\YouEDA --workers 8
+```
+
+Bounds how many parts are being fetched/parsed at once. It does **not** raise the request
+rate — see [`--rps`](#--rps-n-request-rate) — so on a cold cache it mainly helps overlap
+parsing/export work with the next fetch's wait; the real throughput gain shows up on a warm
+cache (see [Performance](#performance)). Defaults to 1 if omitted.
+
+### `--rps <n>`: request rate
+
+```powershell
+dotnet run --project cli -- --input .\parts.csv --output C:\Libraries\YouEDA --rps 2
+```
+
+Currently **informational only** — the underlying fetch gate is fixed at 1 request/second
+(the same default `YouEDA` desktop protects the public EasyEDA endpoint with). Passing a
+value other than `1` prints a note to that effect but doesn't change behavior.
+
+### `--resume` + `--checkpoint <n>`: interrupt and continue safely
+
+Start a large job, interrupt it with `Ctrl+C`, then continue where it left off:
+
+```powershell
+dotnet run --project cli -- --input .\parts.csv --output C:\Libraries\YouEDA --checkpoint 25
+# ... Ctrl+C partway through ...
+dotnet run --project cli -- --input .\parts.csv --output C:\Libraries\YouEDA --resume
+```
+
+`--resume` skips any part already recorded in `.youeda-bulk\completed.txt` for that output
+directory. Without `--resume`, a run starts fresh and clears that ledger and the error log.
+`--checkpoint <n>` controls how often the native libraries are saved and verified (every `n`
+successfully processed parts, default 10) — a crash between checkpoints loses work only back
+to the last one, never the whole run.
+
+### `--with-3d`: download STEP 3D models
+
+```powershell
+dotnet run --project cli -- --input .\parts.csv --output C:\Libraries\YouEDA --with-3d
+```
+
+Opt-in because a full catalog run can download a large number of STEP files. Models land in
+`<output>\models\` as `<model-name>.step` (e.g. `R0805_L2.0-W1.3-H0.6.step`) and are embedded
+in `youeda.PcbLib`. Parts that share the same EasyEDA package/model reuse the same downloaded
+payload internally rather than re-fetching it. A part with no supplied 3D model is skipped
+without failing the import.
+
+### `--version` / `--help`
+
+```powershell
+dotnet run --project cli -- --version
+# YouEDA CLI 1.4.0.0
+
+dotnet run --project cli -- --help
+# full flag list
+```
+
+Running with no arguments at all also prints the flag list (and exits with code 1, so a
+forgotten command in a script fails loudly instead of silently doing nothing).
+
+### Output layout
 
 ```text
 youeda.PcbLib
 youeda.SchLib
-.youeda-bulk\cache\          raw EasyEDA payload cache
-.youeda-bulk\completed.txt    parts successfully checkpointed
-.youeda-bulk\errors.jsonl     failures that can be retried later
+models\                       STEP 3D models, only with --with-3d
+.youeda-bulk\cache\            raw EasyEDA payload cache (valid 7 days)
+.youeda-bulk\completed.txt     parts successfully checkpointed, used by --resume
+.youeda-bulk\errors.jsonl      failures, one JSON object per line, safe to retry later
 ```
 
-For a 100,000-part job, begin with `--workers 4 --rps 1 --checkpoint 100`, review a sample
-batch in Altium, and only then adjust throughput within your authorized LCSC/EasyEDA request
-limits. A single 100,000-component native library can become very large; plan disk space,
-backups, and an eventual sharding policy if Altium becomes slow to open it.
+### Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | Success — every part imported, or `--version`/`--help` |
+| `1` | Partial failure (some parts failed), no parts matched/to import, a required file was missing, or no arguments were given |
+| `2` | Bad usage — unrecognized/malformed argument, missing `--output`, or neither `--input` nor `--category`+`--catalog` given |
+| `130` | Cancelled with `Ctrl+C` |
+
+### Large jobs
+
+For a 100,000-part job, begin with `--workers 4 --checkpoint 100`, review a sample batch in
+Altium, and only then adjust throughput within your authorized LCSC/EasyEDA request limits.
+A single 100,000-component native library can become very large; plan disk space, backups,
+and an eventual sharding policy if Altium becomes slow to open it.
 
 ## Current status
 
+As of the [v1.4.0 release](https://github.com/youprint/YouEDA-CLI/releases/tag/v1.4.0),
 `--input` (BOM/CSV) and `--category`/`--catalog` (filtered catalog) imports both run for real:
 live EasyEDA/LCSC fetch, native Altium export, checkpointing, and `--resume` all work end to
 end. Verified against a live 351-part JLCPCB Basic Parts BOM (351/351 succeeded). Not yet done:
-`--with-3d` is implemented and manually verified but has no automated test; packaging/benchmarks
-(Phases 3-4 in [ROADMAP.md](ROADMAP.md)) haven't started. See [MIGRATION_PLAN.md](MIGRATION_PLAN.md)
-for what was ported and what's still new CLI-only code.
+`--with-3d` is implemented and manually verified but has no automated test; the export-side
+geometry/checkpoint tests noted in [ROADMAP.md](ROADMAP.md)'s Phase 4 entry haven't been
+ported yet. See [MIGRATION_PLAN.md](MIGRATION_PLAN.md) for what was ported and what's still
+new CLI-only code.
 
 The `--category`/`--catalog` filter has no fixed LCSC export schema to target, since LCSC
 doesn't publish one official CSV layout. The filter matches likely column headers
