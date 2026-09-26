@@ -26,6 +26,10 @@ pieces fit together and [ROADMAP.md](ROADMAP.md) for what's still ahead (packagi
 - Structured JSON-lines error log for failed parts.
 - STEP download is opt-in with `--with-3d`, because a full catalog can consume substantial
   time and storage.
+- A live terminal progress bar — percentage, succeeded/failed counts, throughput, elapsed time,
+  and ETA — in an interactive console; falls back to periodic plain-text progress lines when
+  stdout is redirected (a log file, a pipe, CI), since an in-place redraw doesn't mean anything
+  once captured.
 
 ## Build
 

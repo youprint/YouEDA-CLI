@@ -1,4 +1,5 @@
 using YouEDA.CLI.Options;
+using YouEDA.CLI.Terminal;
 using YouEDA.Engine.Services;
 
 if (args is ["--help"] or [])
@@ -101,15 +102,34 @@ Console.CancelKeyPress += (_, e) =>
     cts.Cancel();
 };
 
+// A redirected/piped stdout (e.g. > log.txt, or CI) can't usefully redraw an in-place bar,
+// so fall back to the plain periodic text line ImportJobRunner already prints for that case.
+var useBar = ProgressBar.IsSupported;
+var bar = useBar ? new ProgressBar() : null;
+
+void Log(string message)
+{
+    if (bar is null) { Console.WriteLine(message); return; }
+    // Skip the noisy per-request/per-part lines while the bar owns the terminal line — the bar
+    // already communicates progress; failures and milestones still print above it.
+    if (message.StartsWith("[OK]") || message.StartsWith("GET ")) return;
+    bar.Clear();
+    Console.WriteLine(message);
+}
+
 try
 {
-    var result = await ImportJobRunner.RunAsync(partNumbers, options, Console.WriteLine, cts.Token);
+    Action<ImportProgress>? onProgress = bar is null ? null : bar.Report;
+    var result = await ImportJobRunner.RunAsync(
+        partNumbers, options, Log, onProgress, cts.Token);
+    bar?.Finish();
     Console.WriteLine(
         $"Done: {result.Succeeded} succeeded, {result.Failed} failed, {result.SkippedAlreadyDone} already checkpointed, {result.Total} total.");
     return result.Failed == 0 ? 0 : 1;
 }
 catch (OperationCanceledException)
 {
+    bar?.Finish();
     Console.Error.WriteLine("Import cancelled.");
     return 130;
 }
