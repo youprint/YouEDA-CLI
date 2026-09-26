@@ -17,6 +17,12 @@ public sealed record ImportJobOptions
 public sealed record ImportJobResult(int Total, int Succeeded, int Failed, int SkippedAlreadyDone);
 
 /// <summary>
+/// A point-in-time snapshot of an in-progress import, for a caller that wants to render its own
+/// progress UI (e.g. a terminal progress bar in cli/) instead of parsing log text.
+/// </summary>
+public sealed record ImportProgress(int Done, int Pending, int Succeeded, int Failed, TimeSpan Elapsed, double RatePerMinute, TimeSpan Eta);
+
+/// <summary>
 /// Orchestrates an import for an already-resolved list of LCSC part numbers, whether they came
 /// from a BOM/CSV (<see cref="CsvBomReader"/>) or a --category/--catalog filter
 /// (<see cref="CatalogFilter"/>): bounded parallel fetch/parse against
@@ -28,7 +34,7 @@ public static class ImportJobRunner
 {
     public static async Task<ImportJobResult> RunAsync(
         IReadOnlyList<string> allParts, ImportJobOptions options, Action<string>? log = null,
-        CancellationToken cancellationToken = default)
+        Action<ImportProgress>? onProgress = null, CancellationToken cancellationToken = default)
     {
         Directory.CreateDirectory(options.OutputPath);
         var stateDirectory = Path.Combine(options.OutputPath, ".youeda-bulk");
@@ -133,26 +139,41 @@ public static class ImportJobRunner
         progressCts.Cancel();
         try { await progressTask; } catch (OperationCanceledException) { }
 
+        // Emit one final snapshot so a progress bar consumer lands on 100% instead of freezing
+        // wherever the last periodic tick happened to land.
+        onProgress?.Invoke(Snapshot(stopwatch.Elapsed));
+
         await writer.CheckpointAsync();
 
         return new ImportJobResult(allParts.Count, succeeded, failed, completed.Count);
+
+        ImportProgress Snapshot(TimeSpan elapsed)
+        {
+            var done = succeeded + failed;
+            var ratePerMinute = done / Math.Max(elapsed.TotalMinutes, 0.001);
+            var remaining = pending.Length - done;
+            var eta = ratePerMinute > 0 ? TimeSpan.FromMinutes(remaining / ratePerMinute) : TimeSpan.Zero;
+            return new ImportProgress(done, pending.Length, succeeded, failed, elapsed, ratePerMinute, eta);
+        }
 
         async Task ReportProgressAsync(CancellationToken progressToken)
         {
             // Mirrors YouEDA's desktop live speed indicator: average throughput, elapsed time,
             // and an ETA, updated on a periodic tick even while requests are waiting on the
-            // network. This never blocks or slows the actual import work.
+            // network. This never blocks or slows the actual import work. A caller with no
+            // onProgress callback (e.g. a non-interactive/redirected run) gets the old periodic
+            // text line instead, so this stays useful without a terminal UI attached.
+            var tickInterval = onProgress is not null ? TimeSpan.FromMilliseconds(200) : TimeSpan.FromSeconds(5);
             while (true)
             {
-                await Task.Delay(TimeSpan.FromSeconds(5), progressToken);
+                await Task.Delay(tickInterval, progressToken);
                 var done = succeeded + failed;
                 if (done == 0 || done >= pending.Length) continue;
-                var ratePerMinute = done / Math.Max(stopwatch.Elapsed.TotalMinutes, 0.001);
-                var remaining = pending.Length - done;
-                var eta = ratePerMinute > 0 ? TimeSpan.FromMinutes(remaining / ratePerMinute) : TimeSpan.Zero;
+                var snapshot = Snapshot(stopwatch.Elapsed);
+                if (onProgress is not null) { onProgress(snapshot); continue; }
                 log?.Invoke(
-                    $"-- progress: {done}/{pending.Length} ({succeeded} ok, {failed} failed) | " +
-                    $"{ratePerMinute:0.0}/min | elapsed {FormatDuration(stopwatch.Elapsed)} | ETA {FormatDuration(eta)} --");
+                    $"-- progress: {snapshot.Done}/{snapshot.Pending} ({snapshot.Succeeded} ok, {snapshot.Failed} failed) | " +
+                    $"{snapshot.RatePerMinute:0.0}/min | elapsed {FormatDuration(snapshot.Elapsed)} | ETA {FormatDuration(snapshot.Eta)} --");
             }
         }
     }

@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\engine\YouEDA.Engine.csproj" />
+    <ProjectReference Include="..\cli\YouEDA.CLI.csproj" />
   </ItemGroup>
 
   <ItemGroup>
