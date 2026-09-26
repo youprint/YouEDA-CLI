@@ -2,6 +2,13 @@ using YouEDA.CLI.Options;
 using YouEDA.CLI.Terminal;
 using YouEDA.Engine.Services;
 
+if (args is ["--version"])
+{
+    var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+    Console.WriteLine($"YouEDA CLI {version}");
+    return 0;
+}
+
 if (args is ["--help"] or [])
 {
     PrintUsage();
